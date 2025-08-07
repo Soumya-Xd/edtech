@@ -5,6 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 
+// Define a User type — add more fields if needed
+interface User {
+  id: number;
+  role: string;
+  [key: string]: any;
+}
+
 const GET_COURSE_BY_ID = gql`
   query ($id: Int!) {
     getCourseById(id: $id) {
@@ -29,12 +36,17 @@ export default function CourseDetailPage() {
   const router = useRouter();
   const params = useParams();
   const courseId = Number(params.id);
-  const [user, setUser] = useState<any>(null);
+
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser) as User);
+      } catch {
+        router.push('/login');
+      }
     } else {
       router.push('/login');
     }
@@ -48,6 +60,8 @@ export default function CourseDetailPage() {
   const [enrollUser] = useMutation(ENROLL_USER);
 
   const handleEnroll = async () => {
+    if (!user) return;
+
     try {
       await enrollUser({
         variables: {
@@ -57,13 +71,17 @@ export default function CourseDetailPage() {
         },
       });
       router.push('/enrolled');
-    } catch (err: any) {
-      alert('Enrollment failed: ' + err.message);
+    } catch (err: unknown) {
+      // Use more generic error handling
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      alert('Enrollment failed: ' + message);
     }
   };
 
   if (loading) return <p className="text-blue-500">Loading...</p>;
   if (error) return <p className="text-red-500">Error: {error.message}</p>;
+
+  if (!data?.getCourseById) return <p>Course not found.</p>;
 
   const course = data.getCourseById;
   const isProfessor = user?.role === 'professor';

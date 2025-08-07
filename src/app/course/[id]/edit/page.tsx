@@ -5,6 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import BackButton from '@/components/BackButton';
 
+// Define a User type (adjust fields as needed)
+interface User {
+  role: string;
+  [key: string]: any;
+}
+
 const GET_COURSE_BY_ID = gql`
   query ($id: Int!) {
     getCourseById(id: $id) {
@@ -32,15 +38,19 @@ export default function EditCoursePage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [level, setLevel] = useState('beginner');
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
-      const u = JSON.parse(storedUser);
-      setUser(u);
-      if (u.role !== 'professor') {
-        router.push('/');
+      try {
+        const u: User = JSON.parse(storedUser);
+        setUser(u);
+        if (u.role !== 'professor') {
+          router.push('/');
+        }
+      } catch {
+        router.push('/login');
       }
     } else {
       router.push('/login');
@@ -73,6 +83,9 @@ export default function EditCoursePage() {
     });
     router.push(`/course/${courseId}`);
   };
+
+  // If you don't need to use `user` anywhere else, you can leave it as is
+  // Or add a loading state like: if (!user) return <p>Loading...</p>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white py-10 px-6">
